@@ -4,14 +4,16 @@ import subprocess
 import discord
 from discord import app_commands
 
+
 def loadenv(envpath: str) -> dict[str, str]:
     d = {}
     with open(envpath, "r") as env:
-        for i in env.read().strip().split('\n'):
-            print(i.split('='))
-            k,v = i.split('=')
+        for i in env.read().strip().split("\n"):
+            print(i.split("="))
+            k, v = i.split("=")
             d[k] = v
     return d
+
 
 ENV = loadenv(".env")
 
@@ -43,19 +45,22 @@ if CLAUDE_API_KEY == "none":
     print("CLAUDE_API_KEY not found in .env file")
     exit(1)
 
+
 # returns (is_error, response)
 def get_response(dir: str, question: str) -> tuple[bool, str]:
-    custom_env = os.environ | { "ANTHROPIC_API_KEY": CLAUDE_API_KEY }
+    custom_env = os.environ | {"ANTHROPIC_API_KEY": CLAUDE_API_KEY}
 
     result = subprocess.run(
-        ["claude", "-p", question,
-         "--allowedTools", "Read,Grep,Glob",
-         "--output-format", "json",
-         "--system-prompt", "You are a codebase explainer for a Discord bot." +
-            " Users ask questions about this repository and you answer using the Read, Grep, and Glob tools to inspect it." +
-            " Explain clearly and directly. You have no ability to edit, run, or fix anything, so never offer to." +
-            " Do not end responses with questions or suggestions for further action, just answer.",
-         ],
+        [
+            "claude", "-p", question,
+            "--allowedTools", "Read,Grep,Glob,Bash(tree:*),Bash(git log:*),Bash(git blame:*),Bash(git diff:*)",
+            "--disallowedTools", "Edit,Write,MultiEdit,NotebookEdit,Bash",
+            "--output-format", "json",
+            "--system-prompt", "You are a codebase explainer for a Discord bot."
+            + " Users ask questions about this repository and you answer using the Read, Grep, and Glob tools to inspect it."
+            + " Explain clearly and directly. You have no ability to edit, run, or fix anything, so never offer to."
+            + " Do not end responses with questions or suggestions for further action, just answer.",
+        ],
         cwd=dir,
         capture_output=True,
         text=True,
@@ -72,6 +77,7 @@ def get_response(dir: str, question: str) -> tuple[bool, str]:
         return True, js["result"]
 
     return False, js["result"]
+
 
 def chunk_message(text: str, limit: int = 2000) -> list[str]:
     chunks = []
@@ -131,15 +137,17 @@ def chunk_message(text: str, limit: int = 2000) -> list[str]:
     flush()
     return chunks
 
+
 @client.event
 async def on_ready():
     await tree.sync(guild=discord.Object(id=DISCORD_GUILD_ID))
-    print(f'We have logged in as {client.user}')
+    print(f"We have logged in as {client.user}")
+
 
 @tree.command(
     name="ask",
     description="Ask claude code a question about the codebase",
-    guild=discord.Object(id=DISCORD_GUILD_ID)
+    guild=discord.Object(id=DISCORD_GUILD_ID),
 )
 async def ask_question_command(interaction, question: str):
     print("Got question:", question)
@@ -161,7 +169,7 @@ async def ask_question_command(interaction, question: str):
 @tree.command(
     name="help",
     description="Show available commands",
-    guild=discord.Object(id=DISCORD_GUILD_ID)
+    guild=discord.Object(id=DISCORD_GUILD_ID),
 )
 async def help_command(interaction):
     resp = (
@@ -171,5 +179,6 @@ async def help_command(interaction):
         "`/help` — Show this message."
     )
     await interaction.response.send_message(resp)
+
 
 client.run(DISCORD_TOKEN)
