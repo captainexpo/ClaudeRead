@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import discord
 from discord import app_commands
@@ -37,8 +38,15 @@ if DIRECTORY_PATH is None:
     print("DIRECTORY_PATH not found in .env file")
     exit(1)
 
+CLAUDE_API_KEY = ENV.get("CLAUDE_API_KEY", "none")
+if CLAUDE_API_KEY == "none":
+    print("CLAUDE_API_KEY not found in .env file")
+    exit(1)
+
 # returns (is_error, response)
 def get_response(dir: str, question: str) -> tuple[bool, str]:
+    custom_env = os.environ | { "ANTHROPIC_API_KEY": CLAUDE_API_KEY }
+
     result = subprocess.run(
         ["claude", "-p", question,
          "--allowedTools", "Read,Grep,Glob",
@@ -49,7 +57,10 @@ def get_response(dir: str, question: str) -> tuple[bool, str]:
             " Do not end responses with questions or suggestions for further action, just answer.",
          ],
         cwd=dir,
-        capture_output=True, text=True)
+        capture_output=True,
+        text=True,
+        env=custom_env,
+    )
 
     print("GOT CLAUDE RESPONSE:", result.stdout)
     if result.returncode != 0:
